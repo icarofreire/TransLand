@@ -18,5 +18,9 @@ public class App {
         String result = join(tokens);
         System.out.println(WordUtils.capitalize(result));
         System.out.println("OK!;");
+
+        Tokenizer tk = new Tokenizer();
+        tk.readFileGrammar(tk.getFileInResource("js-grammar.txt"));
+        
     }
 }
