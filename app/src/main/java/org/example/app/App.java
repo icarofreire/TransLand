@@ -20,8 +20,9 @@ public class App {
         // System.out.println("OK!;");
 
         Tokenizer tk = new Tokenizer();
-        // tk.readFileGrammar(tk.getFileInResource("js-grammar.txt"));
-        tk.readFileGrammar(tk.getFileInResource("ruby-grammar.txt"));
+        // tk.readFileGrammar("js-grammar.txt");
+        // tk.readFileGrammar("ruby-grammar.txt");
+        tk.readFileGrammar("python-grammar.txt");
         
     }
 }

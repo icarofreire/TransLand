@@ -42,7 +42,7 @@ public class EarleyParser {
         int iteration = 0;
 
         Tokenizer tokenizer = new Tokenizer();
-        List<String> listTokens = tokenizer.tokenizeInput(input);
+        List<String> listTokens = tokenizer.tokenizeInputForCode(input);
 
         // for(String strToken: listTokens){
             do {

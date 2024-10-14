@@ -8,23 +8,28 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Tokenizer {
 
   /*\/ delimitadores para interpretar o arquivo de código em geral; */
   private String delimiters_code = " =+-!&*/().,?~:;{}[]<>|^%";
 
   /*\/ delimitadores para interpretar o arquivo de gramatica; */
-  private String delimiters_grammar = " |\t()[]?*+";
+  private String delimiters_grammar = " |\t()[]?*+'\"";
 
   /*\/ map com numerações de cada simbolo(nao-terminal e terminal) encontrado na gramatica; */
   private HashMap<String, Integer> symbolNum = new HashMap<String, Integer>();
   /*\/ map com numerações de cada não-terminal encontrado na gramatica; */
   private HashMap<String, Integer> nonTerminals = new HashMap<String, Integer>();
+  /*\/ gramatica; */
+  private HashMap<String, List<String>> grammar = new HashMap<String, List<String>>();
 
 
-  public List<String> tokenizeInput(String input){
+  public List<String> tokenizeInput(String input, String delimiters){
         boolean returnDelims = true;
-        StringTokenizer st1 = new StringTokenizer(input, delimiters_grammar, returnDelims);
+        StringTokenizer st1 = new StringTokenizer(input, delimiters, returnDelims);
         List<String> tokens = new ArrayList<>();
         // Condition holds true till there is single token
         // remaining using hasMoreTokens() method
@@ -36,6 +41,14 @@ public class Tokenizer {
         return tokens;
   }
 
+  public List<String> tokenizeInputForGrammar(String input){
+      return tokenizeInput(input, this.delimiters_grammar);
+  }
+
+  public List<String> tokenizeInputForCode(String input){
+      return tokenizeInput(input, this.delimiters_code);
+  }
+
   private boolean isString(String str){
       int fim = str.length();
       return (
@@ -44,28 +57,17 @@ public class Tokenizer {
       );
   }
 
-  public boolean onlyAlphabets(String str){
-      // Return false if the string
-      // has empty or null
+  private boolean onlyAlphabets(String str){
       if (str == null || str.equals("") && str.isBlank()) {
           return false;
       }
-
-      // Traverse the string from
-      // start to end
-      for (int i = 0; i < str.length(); i++) {
-          // Check if the specified
-          // character is not a letter then
-          // return false,
-          // else return true
-          if (!Character.isLetter(str.charAt(i))) {
-              return false;
-          }
-      }
-      return true;
+      Pattern pattern = Pattern.compile("([a-zA-Z_]+)", Pattern.CASE_INSENSITIVE);
+      Matcher matcher = pattern.matcher(str);
+      boolean matchFound = matcher.find();
+      return (matchFound);
   }
 
-  public String getNonTerm(String linha){
+  private String getNonTerm(String linha){
       int idx = linha.indexOf("::=");
       int idx2 = linha.indexOf(":");
 
@@ -79,7 +81,21 @@ public class Tokenizer {
       return null;
   }
 
-  public boolean addHashIfNot(HashMap<String, Integer> map, String key, int value){
+  private String getProduction(String linha){
+      int idx = linha.indexOf("::=");
+      int idx2 = linha.indexOf(":");
+
+      if(idx != -1){
+        String term = linha.substring(idx+3, linha.length()).trim();
+        return (onlyAlphabets(term) ? (term) : (null));
+      }else if(idx2 != -1){
+        String term = linha.substring(idx2+1, linha.length()).trim();
+        return (onlyAlphabets(term) ? (term) : (null));
+      }
+      return null;
+  }
+
+  private boolean addHashIfNot(HashMap<String, Integer> map, String key, int value){
     if(!key.isBlank()){
       key = (key.length() > 1 && isString(key) ? (key.substring(1,key.length()-1)) : (key));
       if(!map.containsKey(key)){
@@ -90,7 +106,7 @@ public class Tokenizer {
     return false;
   }
 
-  public void exibirMap(HashMap<String, Integer> mapa){
+  private void exibirMap(HashMap<String, Integer> mapa){
     for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
         String k = entry.getKey();
         int v = entry.getValue();
@@ -99,7 +115,16 @@ public class Tokenizer {
     // System.out.println( "tam-mapa:" + mapa.size() + "; " + mapa.containsKey("return") );
   }
 
+  private void exibirGrammar(){
+    for (Map.Entry<String, List<String>> entry : grammar.entrySet()) {
+        String k = entry.getKey();
+        List<String> v = entry.getValue();
+        System.out.println(k + " -> " + v.stream().collect(Collectors.joining()));
+    }
+  }
+
   public void readFileGrammar(String arquivo_grammar){
+        arquivo_grammar = getFileInResource(arquivo_grammar);
         File file = new File(arquivo_grammar);
         if(file.exists()){
           try {
@@ -109,41 +134,64 @@ public class Tokenizer {
               while (myReader.hasNextLine()) {
                 String linha = myReader.nextLine();
 
+                boolean comment = (!linha.isBlank() && String.valueOf(linha.trim().charAt(0)).equals("#"));
+                boolean production = (!comment && !linha.isBlank() && !String.valueOf(linha.trim().charAt(0)).equals("|"));
+                boolean continue_production = (!comment && !linha.isBlank() && String.valueOf(linha.trim().charAt(0)).equals("|"));
+
                 /*\/ registrar linha que contém o non-terminal; */
-                if(!linha.isBlank() && !String.valueOf(linha.trim().charAt(0)).equals("|")){
+                if(production){
                   priLineNonTerm = linha;
                 }
 
                 /*\/ exibir linha que continua com a primeira linha do non-terminal, ou
                 não, apenas continua com a linha completa já registrada; */
-                if(!linha.isBlank() && String.valueOf(linha.trim().charAt(0)).equals("|")){
+                if(continue_production){
                   /*\/ linha encontrada pertencente a linha do non-terminal; */
                   // System.out.println(priLineNonTerm);
                   // System.out.println(linha);
-                  for(String part: tokenizeInput(linha)){
+                  for(String part: tokenizeInputForGrammar(linha)){
                     if(addHashIfNot(symbolNum, part, numTokenType))numTokenType++;
                   }
-                }else{
+
+                  /*\/ registra cada production de um não-terminal; */
+                  String prod = getProduction(priLineNonTerm);
+                  if(prod != null){
+                    if(grammar.containsKey(prod)){
+                      /*\/ incrementar mais tokens a production; */
+                      grammar.get(prod).addAll(tokenizeInputForGrammar(linha));
+                    }
+                  }
+
+                }else if(production){
                   /*\/ linha inteira encontrada o non-terminal, até seu fim; */
                   // System.out.println(priLineNonTerm);
 
                   /*\/ registrar non-terminals em hash particular; */
-                  String nonTerm = getNonTerm(priLineNonTerm);
+                  String nonTerm = getNonTerm(linha);
                   if(nonTerm != null){
                     if(!nonTerminals.containsKey(nonTerm) && symbolNum.containsKey(nonTerm)){
                       nonTerminals.put(nonTerm, symbolNum.get(nonTerm));
                     }
+
+                    /*\/ registra cada production de um não-terminal; */
+                    String prod = getProduction(linha);
+                    if(prod != null){
+                      if(!grammar.containsKey(nonTerm)){
+                        grammar.put(nonTerm, tokenizeInputForGrammar(prod));
+                      }
+                    }
                   }
                   
-                  for(String part: tokenizeInput(priLineNonTerm)){
+                  for(String part: tokenizeInputForGrammar(linha)){
                     if(addHashIfNot(symbolNum, part, numTokenType))numTokenType++;
-                    // System.out.println(part);
                   }
                 }
                 // System.out.println("***");
               }
               myReader.close();
-              exibirMap(symbolNum);
+              // exibirMap(symbolNum);
+              // exibirMap(nonTerminals);
+              exibirGrammar();
           } catch (FileNotFoundException e) {
               System.out.println("An error occurred.");
               e.printStackTrace();
@@ -151,9 +199,18 @@ public class Tokenizer {
         }else{ System.out.println("Arquivo nao existe;"); }
   }
 
-  public String getFileInResource(String arquivo){
+  /*\/ encontrar caminho do arquivo na pasta resource; */
+  private String getFileInResource(String arquivo){
       String caminho = getClass().getClassLoader().getResource(arquivo).getPath();
       return caminho;
+  }
+
+  public HashMap<String, Integer> getSymbolNum(){
+    return symbolNum;
+  }
+
+  public HashMap<String, Integer> getNonTerminals(){
+    return nonTerminals;
   }
 
 }
