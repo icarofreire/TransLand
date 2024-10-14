@@ -154,11 +154,13 @@ public class Tokenizer {
                   }
 
                   /*\/ registra cada production de um não-terminal; */
-                  String prod = getProduction(priLineNonTerm);
-                  if(prod != null){
-                    if(grammar.containsKey(prod)){
+                  String nonTerm = getNonTerm(priLineNonTerm);
+                  if(nonTerm != null){
+                    if(grammar.containsKey(nonTerm)){
                       /*\/ incrementar mais tokens a production; */
-                      grammar.get(prod).addAll(tokenizeInputForGrammar(linha));
+                      grammar.get(nonTerm).addAll(tokenizeInputForGrammar(linha));
+                    }else{
+                      grammar.put(nonTerm, tokenizeInputForGrammar(linha));
                     }
                   }
 
@@ -191,7 +193,7 @@ public class Tokenizer {
               myReader.close();
               // exibirMap(symbolNum);
               // exibirMap(nonTerminals);
-              exibirGrammar();
+              // exibirGrammar();
           } catch (FileNotFoundException e) {
               System.out.println("An error occurred.");
               e.printStackTrace();
@@ -211,6 +213,10 @@ public class Tokenizer {
 
   public HashMap<String, Integer> getNonTerminals(){
     return nonTerminals;
+  }
+
+  public HashMap<String, List<String>> getGrammar(){
+    return grammar;
   }
 
 }
