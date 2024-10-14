@@ -13,14 +13,15 @@ import org.apache.commons.text.WordUtils;
 
 public class App {
     public static void main(String[] args) {
-        LinkedList tokens;
-        tokens = split(getMessage());
-        String result = join(tokens);
-        System.out.println(WordUtils.capitalize(result));
-        System.out.println("OK!;");
+        // LinkedList tokens;
+        // tokens = split(getMessage());
+        // String result = join(tokens);
+        // System.out.println(WordUtils.capitalize(result));
+        // System.out.println("OK!;");
 
         Tokenizer tk = new Tokenizer();
-        tk.readFileGrammar(tk.getFileInResource("js-grammar.txt"));
+        // tk.readFileGrammar(tk.getFileInResource("js-grammar.txt"));
+        tk.readFileGrammar(tk.getFileInResource("ruby-grammar.txt"));
         
     }
 }
